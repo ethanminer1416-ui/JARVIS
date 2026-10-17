@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#03060f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>J.A.R.V.I.S.</title>
+<style>
+  :root { --ink:#e6f1ff; --dim:#7f93b5; --glass:rgba(7,15,34,.74); --line:rgba(120,185,255,.24); --accent:#5cb8ff;
+          --top:env(safe-area-inset-top,0px); --bot:env(safe-area-inset-bottom,0px); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:#03060f; color:var(--ink); overflow:hidden; overscroll-behavior:none;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #bg { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:manipulation; }
+  button, input, textarea, select { font:inherit; color:inherit; }
+  #top { position:fixed; left:0; right:0; top:0; padding:calc(var(--top) + 12px) 16px 8px; display:flex; align-items:center; gap:10px; pointer-events:none; }
+  #top h1 { margin:0; font-size:14px; font-weight:600; letter-spacing:.42em; color:#d6ecff; text-shadow:0 0 14px rgba(92,184,255,.7); }
+  #status { font-size:11px; letter-spacing:.08em; color:var(--dim); text-transform:uppercase; margin-top:3px; max-width:62vw; }
+  #top .sp { flex:1; }
+  .chipbtn { pointer-events:auto; border:1px solid var(--line); background:rgba(80,150,255,.1); border-radius:999px; padding:8px 14px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
+  .chipbtn:active { background:rgba(80,150,255,.32); }
+  #card { position:fixed; left:12px; right:12px; bottom:calc(var(--bot) + 84px); max-height:38vh; overflow:auto; padding:14px 16px;
+    background:linear-gradient(180deg, rgba(20,44,92,.5), rgba(6,13,30,.82)); border:1px solid var(--line); border-radius:16px; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 8px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(180,220,255,.16); border-left:3px solid var(--accent); display:none; }
+  #card.show { display:block; }
+  #you { font-size:12px; color:var(--dim); margin-bottom:6px; letter-spacing:.03em; }
+  #ans { font-size:16px; line-height:1.45; white-space:pre-wrap; }
+  #card.err { border-left-color:#ff6b6b; }
+  #acts { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  #acts a, #acts button { text-decoration:none; border:1px solid rgba(120,185,255,.5); background:rgba(80,160,255,.18); color:#d6ecff; border-radius:10px; padding:9px 14px; font-size:13px; letter-spacing:.06em; }
+  #bar { position:fixed; left:0; right:0; bottom:0; padding:10px 12px calc(var(--bot) + 10px); display:flex; gap:10px; align-items:center;
+    background:linear-gradient(180deg, rgba(3,6,15,0), rgba(3,6,15,.92) 40%); }
+  #q { flex:1; min-width:0; height:48px; border-radius:24px; border:1px solid var(--line); background:rgba(8,18,40,.78); padding:0 18px; font-size:16px; outline:none; }
+  #q:focus { border-color:rgba(160,215,255,.7); box-shadow:0 0 16px rgba(80,160,255,.3); }
+  #q::placeholder { color:#5d7396; }
+  #mic, #send { width:48px; height:48px; border-radius:50%; border:1px solid rgba(120,185,255,.45); background:rgba(80,150,255,.12); display:grid; place-items:center; flex:none; padding:0; }
+  #mic svg, #send svg { width:22px; height:22px; fill:none; stroke:#bfe3ff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  #mic[aria-pressed="true"] { background:rgba(70,150,255,.85); border-color:#bfe3ff; box-shadow:0 0 14px rgba(92,184,255,.55); }
+  #mic[aria-pressed="true"] svg { stroke:#02101f; }
+  #send { background:linear-gradient(180deg,#7fcaff,#3f9bff); border:0; } #send svg { stroke:#03101f; }
+  /* start screen */
+  #start { position:fixed; inset:0; z-index:20; display:grid; place-items:center; text-align:center; background:radial-gradient(circle at 50% 38%, rgba(30,80,170,.55), #03060f 70%); padding:24px; }
+  #start .box { max-width:340px; }
+  #start h2 { margin:18px 0 6px; font-size:20px; letter-spacing:.5em; font-weight:600; color:#d6ecff; text-shadow:0 0 16px rgba(92,184,255,.8); }
+  #start p { color:var(--dim); font-size:14px; line-height:1.5; margin:8px 0 22px; }
+  #go { border:0; border-radius:999px; padding:15px 38px; font-size:15px; letter-spacing:.24em; text-transform:uppercase; font-weight:700; color:#03101f;
+        background:linear-gradient(180deg,#8fd3ff,#3f9bff); box-shadow:0 0 28px rgba(80,160,255,.6); }
+  #start svg { width:120px; height:120px; filter:drop-shadow(0 0 16px rgba(92,184,255,.8)); animation:slow 24s linear infinite; }
+  @keyframes slow { to { transform:rotate(360deg); } }
+  /* modals */
+  .modal { position:fixed; inset:0; z-index:30; background:rgba(2,6,14,.82); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); display:none; padding:calc(var(--top) + 14px) 14px calc(var(--bot) + 14px); overflow:auto; }
+  .modal.show { display:block; }
+  .sheet { max-width:520px; margin:0 auto; background:linear-gradient(180deg, rgba(20,44,92,.55), rgba(6,13,30,.92)); border:1px solid var(--line); border-radius:18px; padding:18px; }
+  .sheet h3 { margin:0 0 12px; font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:#9fd3ff; display:flex; justify-content:space-between; align-items:center; }
+  .sheet label { display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:14px 0 5px; }
+  .sheet input[type=text], .sheet input[type=password], .sheet input[type=number], .sheet select, .sheet textarea { width:100%; border-radius:10px; border:1px solid var(--line); background:rgba(8,18,40,.8); padding:11px 12px; font-size:15px; outline:none; }
+  .sheet textarea { min-height:84px; resize:vertical; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; font-size:14px; }
+  .row input[type=checkbox] { width:22px; height:22px; accent-color:#5cb8ff; }
+  .btn { border:1px solid rgba(120,185,255,.5); background:rgba(80,160,255,.18); border-radius:10px; padding:10px 16px; font-size:13px; letter-spacing:.1em; text-transform:uppercase; }
+  .btn.primary { background:linear-gradient(180deg,#7fcaff,#3f9bff); color:#03101f; border:0; font-weight:700; }
+  .btn.warn { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.12); }
+  .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+  .hint { font-size:12px; color:#6f87ad; line-height:1.5; margin-top:6px; }
+  .note { border:1px solid var(--line); border-radius:12px; padding:12px; margin:10px 0; background:rgba(8,18,40,.6); }
+  .note b { display:block; margin-bottom:4px; color:#d6ecff; } .note div { font-size:14px; color:#bcd0ea; white-space:pre-wrap; }
+  .note button { margin-top:8px; font-size:11px; padding:6px 10px; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<div id="top">
+  <div><h1>J.A.R.V.I.S.</h1><div id="status">Tap to start</div></div>
+  <div class="sp"></div>
+  <button class="chipbtn" id="bNotes">Notes</button>
+  <button class="chipbtn" id="bSet">Settings</button>
+</div>
+
+<div id="card"><div id="you"></div><div id="ans"></div><div id="acts"></div></div>
+
+<div id="bar">
+  <input id="q" type="text" placeholder="Ask Jarvis anything" autocomplete="off" autocapitalize="sentences" enterkeyhint="send">
+  <button id="mic" aria-pressed="false" aria-label="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  <button id="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+</div>
+
+<div id="start"><div class="box">
+  <svg viewBox="0 0 100 100"><g fill="none" stroke="#5cb8ff" stroke-width="2"><circle cx="50" cy="50" r="45" stroke-dasharray="12 7"/><circle cx="50" cy="50" r="34" stroke="#9fd8ff" stroke-width="1.5" stroke-dasharray="3 6"/><path d="M50 8v10M50 82v10M8 50h10M82 50h10" stroke-width="3"/></g><circle cx="50" cy="50" r="12" fill="#cfeaff"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>
+  <h2>JARVIS</h2>
+  <p>Your assistant, living on this phone. Tap to wake him up and allow the microphone when asked.</p>
+  <button id="go">Start</button>
+</div></div>
+
+<div class="modal" id="mSet"><div class="sheet">
+  <h3>Settings <button class="btn" id="setClose">Close</button></h3>
+  <label>AI provider</label>
+  <select id="fProv"><option value="groq">Groq (gpt-oss-120b)</option><option value="gemini">Google Gemini</option><option value="nvidia">NVIDIA (free models)</option><option value="custom">Custom (any OpenAI-style API)</option></select>
+  <label>API key</label>
+  <input id="fKey" type="password" placeholder="paste your key" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="hint">The key is saved only on this phone. It is never put in any file, and Jarvis only sends it to the provider you chose above.</div>
+  <div class="hint" id="keyNote"></div>
+  <div class="btns" style="margin-top:8px"><button class="btn" id="bTestBrain">Test brain</button></div>
+  <div class="hint" id="brainMsg"></div>
+  <label>Model</label><input id="fModel" type="text" autocapitalize="off" spellcheck="false">
+  <label>API address</label><input id="fUrl" type="text" autocapitalize="off" spellcheck="false">
+  <label>Your name</label><input id="fName" type="text">
+  <label>Your city (for weather)</label><input id="fCity" type="text" placeholder="Ennis, TX">
+  <label>"Drop my needle" plays</label><input id="fNeedle" type="text" placeholder="a song name, or paste a YouTube link">
+  <label>Sleep after (minutes idle, 0 = never)</label><input id="fSleep" type="number" min="0" max="120">
+  <div class="row"><span>Speak answers aloud</span><input id="fSpeak" type="checkbox"></div>
+  <div class="row"><span>Only answer when I say "Jarvis"</span><input id="fWake" type="checkbox"></div>
+  <div class="row"><span>Temperatures in Fahrenheit</span><input id="fF" type="checkbox"></div>
+  <label>Voice</label>
+  <select id="fVoice"></select>
+  <div class="hint" id="voiceNow"></div>
+  <label>Voice engine</label>
+  <select id="fEngine"><option value="phone">This phone's voices (free)</option><option value="eleven">ElevenLabs (natural voice)</option></select>
+  <div id="elBox">
+    <label>ElevenLabs API key</label><input id="fElKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste your ElevenLabs key">
+    <label>ElevenLabs voice</label><select id="fElVoice"></select>
+    <div class="btns" style="margin-top:8px"><button class="btn" id="bElVoices">Load my voices</button></div>
+    <label>Model</label><select id="fElModel"><option value="eleven_flash_v2_5">Flash v2.5 (fastest, cheapest)</option><option value="eleven_multilingual_v2">Multilingual v2 (richest)</option></select>
+    <div class="hint">The key stays on this phone. Pick a British male voice for the closest match to the computer. If ElevenLabs can't be reached or runs out of credits, Jarvis quietly uses the phone voice instead.</div>
+  </div>
+  <div class="btns" style="margin-top:12px"><button class="btn" id="bTestVoice">Test voice</button></div>
+  <div class="hint" id="voiceTestMsg"></div>
+  <div class="btns"><button class="btn primary" id="setSave">Save</button><button class="btn" id="bInstall" style="display:none">Install app</button><button class="btn" id="bExport">Export notes</button><button class="btn" id="bImport">Import</button></div>
+  <input type="file" id="fImport" accept="application/json" style="display:none">
+  <div class="hint" id="iosHint" style="display:none">iPhone: tap Share, then Add to Home Screen, to install Jarvis.</div>
+</div></div>
+
+<div class="modal" id="mNotes"><div class="sheet">
+  <h3>Notes <button class="btn" id="notesClose">Close</button></h3>
+  <textarea id="nNew" placeholder="Write a note, or just say: Jarvis, remember that..."></textarea>
+  <div class="btns" style="margin-top:10px"><button class="btn primary" id="nSave">Save note</button></div>
+  <div id="nList"></div>
+</div></div>
+
+<script>
+(function () {
+'use strict';
+
+// <core>  ---- pure logic (no screen, no network): this is the part that is unit-tested ----
+function ordinal(n) { var v = n % 100; return n + ((v >= 11 && v <= 13) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th")); }
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function sayTime(d) { var h = d.getHours(), m = d.getMinutes(), ap = h < 12 ? "AM" : "PM"; h = h % 12 || 12; return h + ":" + (m < 10 ? "0" : "") + m + " " + ap; }
+function sayDate(d) { return "It is " + DAYS[d.getDay()] + ", the " + ordinal(d.getDate()) + " of " + MONTHS[d.getMonth()] + " " + d.getFullYear() + "."; }
+function daypart(d) { var h = d.getHours(); return h < 12 ? "morning" : h < 18 ? "afternoon" : "evening"; }
+
+function fact(n) { if (!Number.isInteger(n) || n < 0 || n > 170) throw new Error("factorial out of range"); var r = 1; for (var i = 2; i <= n; i++) r *= i; return r; }
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a; }
+function comb(n, k) { if (k < 0 || k > n) return 0; k = Math.min(k, n - k); var r = 1; for (var i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
+function perm(n, k) { var r = 1; for (var i = 0; i < k; i++) r *= (n - i); return r; }
+var FUN = { sqrt: Math.sqrt, cbrt: Math.cbrt, sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos, atan: Math.atan, atan2: Math.atan2,
+  sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh, log: Math.log10, log10: Math.log10, log2: Math.log2, ln: Math.log, exp: Math.exp, abs: Math.abs, round: Math.round,
+  floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max, pow: Math.pow, hypot: Math.hypot, factorial: fact, gcd: gcd, comb: comb, perm: perm,
+  radians: function (x) { return x * Math.PI / 180; }, degrees: function (x) { return x * 180 / Math.PI; } };
+var CONST = { pi: Math.PI, e: Math.E, tau: 2 * Math.PI };
+var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+function tokenize(s) {
+  var out = [], re = /\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([a-z_][a-z0-9_]*)|(\*\*|\/\/|[-+*\/%(),]))/y, m;
+  while (re.lastIndex < s.length) {
+    var start = re.lastIndex; m = re.exec(s);
+    if (!m) { if (/^\s*$/.test(s.slice(start))) break; throw new Error("cannot read " + s.slice(start, start + 6)); }
+    if (m[1] !== undefined) out.push({ n: parseFloat(m[1]) }); else if (m[2]) out.push({ id: m[2] }); else out.push({ op: m[3] });
+  }
+  return out;
+}
+function evalExpr(src) {      // a small parser, never eval()
+  var T = tokenize(src.toLowerCase()), i = 0;
+  function isOp(o) { return T[i] && T[i].op === o; }
+  function expr() { var v = term(); while (isOp("+") || isOp("-")) { var o = T[i++].op, r = term(); v = o === "+" ? v + r : v - r; } return v; }
+  function term() {
+    var v = unary();
+    while (isOp("*") || isOp("/") || isOp("//") || isOp("%")) {
+      var o = T[i++].op, r = unary();
+      if ((o !== "*") && r === 0) throw new Error("division by zero");
+      v = o === "*" ? v * r : o === "/" ? v / r : o === "//" ? Math.floor(v / r) : ((v % r) + r) % r;
+    }
+    return v;
+  }
+  function unary() { if (isOp("-")) { i++; return -unary(); } if (isOp("+")) { i++; return unary(); } return power(); }
+  function power() { var b = atom(); if (isOp("**")) { i++; var e = unary(); if (Math.abs(e) > 10000) throw new Error("result too large"); return Math.pow(b, e); } return b; }
+  function atom() {
+    var t = T[i++]; if (!t) throw new Error("unexpected end");
+    if (t.n !== undefined) return t.n;
+    if (t.op === "(") { var v = expr(); if (!isOp(")")) throw new Error("missing )"); i++; return v; }
+    if (t.id) {
+      if (isOp("(")) {
+        i++; var a = []; if (!isOp(")")) { a.push(expr()); while (isOp(",")) { i++; a.push(expr()); } }
+        if (!isOp(")")) throw new Error("missing )"); i++;
+        if (!has(FUN, t.id)) throw new Error("unknown function " + t.id);
+        return FUN[t.id].apply(null, a);
+      }
+      if (has(CONST, t.id)) return CONST[t.id];
+      throw new Error("unknown name " + t.id);
+    }
+    throw new Error("unexpected " + t.op);
+  }
+  var v = expr(); if (i < T.length) throw new Error("unexpected input"); return v;
+}
+function calc(expr) {
+  expr = String(expr).trim().replace(/^`+|`+$/g, "").replace(/=+$/, "").trim();
+  if (!expr || expr.length > 300) return { ok: false, v: "empty or too long" };
+  expr = expr.replace(/\^/g, "**").replace(/\u00d7/g, "*").replace(/\u00f7/g, "/").replace(/,/g, "");
+  try {
+    var v = evalExpr(expr);
+    if (typeof v !== "number" || !isFinite(v)) return { ok: false, v: "undefined" };
+    return { ok: true, v: String(parseFloat(v.toPrecision(12))) };
+  } catch (e) { return { ok: false, v: e.message }; }
+}
+function fmt(x) { x = parseFloat(Number(x).toPrecision(10)); return Math.abs(x) >= 1e15 ? String(x) : x.toLocaleString("en-US", { maximumFractionDigits: 6 }); }
+function quickMath(q) {
+  var m = q.match(/^\s*(?:what(?:'s| is)|calculate|compute|how much is|work out)\s+(.+?)\s*[?.!]*$/i); if (!m) return null;
+  var e = m[1].toLowerCase().replace(/,/g, ""), p = e.match(/^(\d+(?:\.\d+)?)\s*(?:%|percent)\s*of\s*(\d+(?:\.\d+)?)$/);
+  if (p) return p[1] + " percent of " + p[2] + " is " + fmt(parseFloat(p[1]) / 100 * parseFloat(p[2])) + ".";
+  var sq = e.match(/^(?:the\s+)?square root of\s*(\d+(?:\.\d+)?)$/); if (sq) return "The square root of " + sq[1] + " is " + fmt(Math.sqrt(parseFloat(sq[1]))) + ".";
+  [[/\bto the power of\b|\braised to\b/g, "**"], [/\bmultiplied by\b|\btimes\b|\bx\b/g, "*"], [/\bdivided by\b|\bover\b/g, "/"], [/\bplus\b/g, "+"], [/\bminus\b/g, "-"], [/\bmod(?:ulo)?\b/g, "%"]]
+    .forEach(function (r) { e = e.replace(r[0], " " + r[1] + " "); });
+  if (!/^[\d\s.+\-*\/%()]+$/.test(e) || !/\d\s*[-+*\/%]\s*\(?\s*\d|\*\*/.test(e)) return null;
+  var r = calc(e); return r.ok ? "That comes to " + fmt(r.v) + "." : null;
+}
+var UNITS = { mm: ["len", .001], cm: ["len", .01], m: ["len", 1], km: ["len", 1000], "in": ["len", .0254], inch: ["len", .0254], inches: ["len", .0254], ft: ["len", .3048], feet: ["len", .3048], foot: ["len", .3048],
+  yd: ["len", .9144], mi: ["len", 1609.344], mile: ["len", 1609.344], miles: ["len", 1609.344], g: ["mass", 1], kg: ["mass", 1000], oz: ["mass", 28.3495], lb: ["mass", 453.592], lbs: ["mass", 453.592],
+  pound: ["mass", 453.592], pounds: ["mass", 453.592], ml: ["vol", 1], l: ["vol", 1000], litre: ["vol", 1000], litres: ["vol", 1000], liter: ["vol", 1000], liters: ["vol", 1000],
+  cup: ["vol", 236.588], cups: ["vol", 236.588], tbsp: ["vol", 14.7868], tsp: ["vol", 4.92892], gallon: ["vol", 3785.41], gallons: ["vol", 3785.41] };
+var TEMP = { f: "fahrenheit", fahrenheit: "fahrenheit", c: "celsius", celsius: "celsius", k: "kelvin", kelvin: "kelvin" };
+function convert(q) {
+  var m = q.match(/^\s*(?:convert\s+|how many\s+\w+\s+(?:is|are)\s+|what(?:'s| is)\s+)?(-?\d+(?:\.\d+)?)\s*(?:degrees?\s+)?([a-z]+)\s+(?:to|in|into)\s+([a-z]+)\s*[?.!]*$/i); if (!m) return null;
+  var val = parseFloat(m[1]), a = m[2].toLowerCase(), b = m[3].toLowerCase();
+  if (has(TEMP, a) && has(TEMP, b)) {
+    var ta = TEMP[a], tb = TEMP[b], c = ta === "celsius" ? val : ta === "fahrenheit" ? (val - 32) * 5 / 9 : val - 273.15;
+    var out = tb === "celsius" ? c : tb === "fahrenheit" ? c * 9 / 5 + 32 : c + 273.15;
+    return fmt(val) + " degrees " + ta + " is " + fmt(Math.round(out * 10) / 10) + " degrees " + tb + ".";
+  }
+  if (has(UNITS, a) && has(UNITS, b) && UNITS[a][0] === UNITS[b][0]) return fmt(val) + " " + a + " is " + fmt(Math.round(val * UNITS[a][1] / UNITS[b][1] * 1000) / 1000) + " " + b + ".";
+  return null;
+}
+var NUMW = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, fifteen: 15, twenty: 20, thirty: 30, forty: 40, "forty-five": 45, sixty: 60, half: .5 };
+function toNum(w) { w = String(w).toLowerCase(); if (/^\d+(\.\d+)?$/.test(w)) return parseFloat(w); return has(NUMW, w) ? NUMW[w] : null; }
+function unitMs(n, u) { u = u[0].toLowerCase(); return n * (u === "s" ? 1000 : u === "m" ? 60000 : 3600000); }
+function parseTimer(q) {
+  var U = "(seconds?|secs?|minutes?|mins?|hours?|hrs?)", N = "(\\d+(?:\\.\\d+)?|[a-z]+(?:-[a-z]+)?)";
+  var m = q.match(new RegExp("^\\s*(?:please\\s+)?(?:set\\s+(?:a\\s+|an\\s+)?(?:timer|reminder|alarm)\\s+(?:for|of)|timer\\s+for|remind\\s+me\\s+in)\\s+" + N + "\\s*" + U + "\\b(?:\\s*(?:to|for|that)\\s+(.+?))?\\s*[.!?]*$", "i")), n, unit, what;
+  if (m) { n = toNum(m[1]); unit = m[2]; what = m[3]; }
+  else {
+    m = q.match(new RegExp("^\\s*remind\\s+me\\s+to\\s+(.+?)\\s+in\\s+" + N + "\\s*" + U + "\\s*[.!?]*$", "i"));
+    if (!m) return null; what = m[1]; n = toNum(m[2]); unit = m[3];
+  }
+  if (n == null || n <= 0 || unitMs(n, unit) > 24 * 3600000) return null;
+  var ms = unitMs(n, unit), words = n + " " + (/^s/i.test(unit) ? "second" : /^m/i.test(unit) ? "minute" : "hour") + (n === 1 ? "" : "s");
+  return { ms: ms, words: words, what: what ? what.trim() : "" };
+}
+function todoCommand(q, items) {   // returns { reply, items } or null
+  var m = q.match(/^\s*(?:please\s+)?(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:my\s+|the\s+)?(?:to-?do|todo|task|shopping|grocery)?\s*list\s*[.!?]*$/i) || q.match(/^\s*(?:please\s+)?(?:add a task|new task|to-?do)\s*[:,]?\s+(.+?)\s*[.!?]*$/i);
+  if (m) { var item = m[1].trim().replace(/[. ]+$/, ""), n = items.concat([item]); return { reply: "Added " + item + ". That makes " + n.length + " on your list.", items: n }; }
+  if (/^\s*(?:what(?:'s| is)\s+on\s+my\s+(?:to-?do\s+)?list|read\s+(?:me\s+)?my\s+(?:to-?do\s+)?list|what do i (?:have|need) to do|my (?:to-?do|task) list)\s*[?.!]*$/i.test(q))
+    return { reply: items.length ? "You have " + items.length + ": " + items.map(function (t, i) { return (i + 1) + ", " + t; }).join("; ") + "." : "Your list is empty, sir. Suspiciously productive.", items: items };
+  if (/^\s*(?:please\s+)?(?:clear|empty|wipe)\s+(?:my\s+)?(?:to-?do\s+)?list\s*[.!?]*$/i.test(q)) return { reply: "List cleared, " + items.length + " item" + (items.length === 1 ? "" : "s") + " gone.", items: [] };
+  m = q.match(/^\s*(?:please\s+)?(?:remove|delete|cross off|check off|tick off|finished|done with)\s+(.+?)\s*(?:from (?:my )?(?:to-?do )?list)?\s*[.!?]*$/i);
+  if (m) {
+    var want = m[1].trim().toLowerCase(), hit = -1;
+    items.forEach(function (t, i) { if (hit < 0 && (t.toLowerCase().indexOf(want) >= 0 || want.indexOf(t.toLowerCase()) >= 0)) hit = i; });
+    if (hit < 0) return null;
+    var left = items.slice(); var gone = left.splice(hit, 1)[0]; return { reply: "Crossed off " + gone + ". " + left.length + " left.", items: left };
+  }
+  return null;
+}
+function chance(q) {
+  var l = q.toLowerCase();
+  if (/\b(flip|toss)\s+(a\s+)?coin\b/.test(l)) return Math.random() < .5 ? "Heads." : "Tails.";
+  var m = l.match(/\broll\s+(?:a\s+|an\s+)?(?:(\d{1,2})d(\d{1,3})|d(\d{1,3})|die|dice)\b/);
+  if (!m) return null;
+  var n = m[1] ? +m[1] : 1, s = m[1] ? +m[2] : +(m[3] || 6); if (n < 1 || n > 20 || s < 2 || s > 1000) return null;
+  var rolls = []; for (var i = 0; i < n; i++) rolls.push(1 + Math.floor(Math.random() * s));
+  return n === 1 ? "You rolled " + rolls[0] + "." : "You rolled " + rolls.join(", ") + ", totalling " + rolls.reduce(function (a, b) { return a + b; }, 0) + ".";
+}
+var WMO = { 0: "clear", 1: "mostly clear", 2: "partly cloudy", 3: "overcast", 45: "foggy", 48: "foggy", 51: "drizzling", 53: "drizzling", 55: "drizzling", 61: "raining lightly", 63: "raining", 65: "raining heavily",
+  71: "snowing lightly", 73: "snowing", 75: "snowing heavily", 80: "showery", 81: "showery", 82: "stormy with heavy showers", 95: "thundery", 96: "thundery with hail", 99: "thundery with hail" };
+var STOP = "the a an and or of to in on is are was were what who when where why how do does did my me i you your it that this about tell say said for with at by from as be have has had can could would should please jarvis".split(" ");
+function scoreNotes(q, notes) {
+  var toks = q.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(function (w) { return w.length > 2 && STOP.indexOf(w) < 0; });
+  if (!toks.length) return [];
+  return notes.map(function (n) {
+    var t = (n.title || "").toLowerCase(), b = (n.body || "").toLowerCase(), s = 0;
+    toks.forEach(function (w) { if (t.indexOf(w) >= 0) s += 3; if (b.indexOf(w) >= 0) s += 1; });
+    return { n: n, s: s };
+  }).filter(function (x) { return x.s > 0; }).sort(function (a, b) { return b.s - a.s; }).slice(0, 3).map(function (x) { return x.n; });
+}
+function speechClean(t) { return String(t).replace(/[*_`#>]+/g, "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim(); }
+function sentences(t) { return (speechClean(t).match(/[^.!?]+[.!?]*\s*/g) || [t]).map(function (s) { return s.trim(); }).filter(Boolean); }
+var VOICE_PREFS = ["ryan online", "google uk english male", "microsoft george", "daniel", "arthur", "oliver", "microsoft guy", "microsoft christopher", "microsoft david", "microsoft mark", "alex", "fred"];
+var VOICE_FEMALE = /female|serena|kate|martha|libby|sonia|hazel|susan|zira|jenny|aria|emma|amy|karen|moira|tessa|fiona|victoria|samantha|heera/i;
+function normLang(v) { return (v.lang || "").replace("_", "-").toLowerCase(); }
+function chooseVoice(vs, saved, want) {      // identical order of preference to the computer version
+  if (!vs || !vs.length) return null;
+  var w = (want || "").toLowerCase(), hit;
+  if (w) { hit = vs.filter(function (v) { return v.name.toLowerCase().indexOf(w) !== -1; }); if (hit.length) return hit[0]; }
+  if (saved) { hit = vs.filter(function (v) { return v.name === saved; }); if (hit.length) return hit[0]; }
+  var en = vs.filter(function (v) { return normLang(v).indexOf("en") === 0; });
+  for (var i = 0; i < VOICE_PREFS.length; i++) {
+    var m = en.filter(function (v) { return v.name.toLowerCase().indexOf(VOICE_PREFS[i]) !== -1; });
+    m.sort(function (a, b) { return (normLang(b) === "en-gb") - (normLang(a) === "en-gb"); });
+    if (m.length) return m[0];
+  }
+  var notF = en.filter(function (v) { return !VOICE_FEMALE.test(v.name); }), gb = notF.filter(function (v) { return normLang(v) === "en-gb"; });
+  if (gb.length) return gb[0]; if (notF.length) return notF[0];
+  return en.length ? en[0] : vs[0];
+}
+function xmlEsc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;"); }
+var KEY_HINTS = [[/^nvapi-/i, "nvidia"], [/^gsk_/i, "groq"], [/^(AIza|AQ\.)/, "gemini"]];
+function providerFromKey(k) { k = String(k || "").trim(); for (var i = 0; i < KEY_HINTS.length; i++) if (KEY_HINTS[i][0].test(k)) return KEY_HINTS[i][1]; return ""; }
+var NEEDLE = /\b(?:drop|lower|put down|set down)\s+(?:the|my|that)\s+needle\b/i;
+// </core>
+
+// ------------------------------------------------------------------ storage and settings
+var $ = function (id) { return document.getElementById(id); };
+var LS = { get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+var PRESETS = { groq: { url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b" },
+  gemini: { url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-3.5-flash-lite" },
+  nvidia: { url: "https://integrate.api.nvidia.com/v1/chat/completions", model: "meta/llama-3.1-70b-instruct" }, custom: { url: "", model: "" } };
+var cfg = Object.assign({ provider: "groq", key: "", url: PRESETS.groq.url, model: PRESETS.groq.model, name: "Ethan", city: "Ennis, TX", needle: "Diary of Jane Breaking Benjamin",
+  sleepMin: 3, speak: true, needWake: true, fahrenheit: true, engine: "phone", voiceName: "", elKey: "", elVoice: "JBFqnCBsd6RMkjVDRZzb", elVoiceName: "George (British male)", elModel: "eleven_flash_v2_5" }, LS.get("jarvis.cfg", {}));
+if (cfg.engine !== "eleven") cfg.engine = "phone";
+var notes = LS.get("jarvis.notes", []), todo = LS.get("jarvis.todo", []);
+var saveCfg = function () { LS.set("jarvis.cfg", cfg); }, saveNotes = function () { LS.set("jarvis.notes", notes); }, saveTodo = function () { LS.set("jarvis.todo", todo); };
+
+// ------------------------------------------------------------------ app state
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var synth = window.speechSynthesis;
+var state = "idle";                        // idle | listening | thinking | speaking
+var asleep = false, started = false, wantRec = false, rec = null, speaking = false, thinking = false;
+var armedUntil = 0, lastActive = Date.now(), history = [], selected = null, timers = [];
+var speakAmp = 0;
+
+function setStatus(t) { $("status").textContent = t; }
+function refreshStatus() {
+  if (!started) return setStatus("Tap to start");
+  if (asleep) return setStatus("Asleep \u00b7 clap twice to wake me");
+  if (thinking) return setStatus("Thinking");
+  if (speaking) return setStatus("Speaking");
+  if (wantRec && rec) return setStatus(cfg.needWake ? "Listening \u00b7 say \u201cJarvis\u201d" : "Listening");
+  setStatus(SR ? "Mic off \u00b7 tap the mic" : "Type to talk");
+}
+function currentState() { return thinking ? "thinking" : speaking ? "speaking" : (wantRec && rec && !asleep) ? "listening" : "idle"; }
+
+// ------------------------------------------------------------------ the card
+function show(you, text, opts) {
+  opts = opts || {};
+  $("card").className = "show" + (opts.err ? " err" : "");
+  $("you").textContent = you ? "\u201c" + you + "\u201d" : "";
+  $("ans").textContent = text;
+  var acts = $("acts"); acts.textContent = "";
+  (opts.actions || []).forEach(function (a) {
+    var el = document.createElement(a.href ? "a" : "button");
+    el.textContent = a.label;
+    if (a.href) { el.href = a.href; el.target = "_blank"; el.rel = "noopener"; } else el.onclick = a.onclick;
+    acts.appendChild(el);
+  });
+}
+
+// ------------------------------------------------------------------ speaking: the computer version's voice rules (same list, pitch 0.9, rate 1.0)
+var VOICE_PITCH = 0.9, VOICE_RATE = 1.0;
+var voiceObj = null, ttsAudio = new Audio(), speakToken = 0, watchdog = null, live = [], doneCb = null, lastCloudError = "", cloudWarned = false;
+var SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+function allVoices() { try { return synth ? (synth.getVoices() || []) : []; } catch (e) { return []; } }
+function pickVoice() { return chooseVoice(allVoices(), cfg.voiceName, new URLSearchParams(location.search).get("voice")); }
+if (synth) { try { synth.onvoiceschanged = function () { voiceObj = pickVoice(); fillVoices(); }; } catch (e) {} voiceObj = pickVoice(); }
+function voicesReady() {
+  return new Promise(function (res) {
+    if (!synth || allVoices().length) return res();
+    var done = false, fin = function () { if (!done) { done = true; res(); } };
+    try { synth.addEventListener("voiceschanged", fin, { once: true }); } catch (e) {} setTimeout(fin, 1200);
+  });
+}
+function finishSpeaking(tok) {
+  if (tok !== speakToken) return;
+  clearTimeout(watchdog); speaking = false; refreshStatus(); resumeRec();
+  var d = doneCb; doneCb = null; if (d) d();
+}
+function stopAudio() { try { ttsAudio.pause(); } catch (e) {} }
+function speak(text, done) {
+  text = speechClean(text);
+  if (!text || !cfg.speak) { if (done) done(); return; }
+  var token = ++speakToken; doneCb = done || null; stopAudio(); try { if (synth) synth.cancel(); } catch (e) {}
+  speaking = true; pauseRec(); refreshStatus();
+  clearTimeout(watchdog); watchdog = setTimeout(function () { finishSpeaking(token); }, 5000 + text.length * 90);   // some phones never fire onend
+  if (cfg.engine === "eleven" && cfg.elKey) return cloudSpeak(text, token, function () { phoneSpeak(text, token); });
+  phoneSpeak(text, token);
+}
+function phoneSpeak(text, token) {
+  if (!synth) return finishSpeaking(token);
+  var chunks = sentences(text), finished = 0;
+  voicesReady().then(function () {
+    setTimeout(function () {                                          // short gap after cancel(): Chrome can swallow an immediate speak()
+      if (token !== speakToken) return;
+      var voice = pickVoice(); voiceObj = voice;
+      chunks.forEach(function (c) {
+        var u = new SpeechSynthesisUtterance(c), ended = false;
+        u.lang = voice ? voice.lang : "en-GB"; if (voice) u.voice = voice; u.pitch = VOICE_PITCH; u.rate = VOICE_RATE;
+        var end = function () { if (ended || token !== speakToken) return; ended = true; if (++finished >= chunks.length) finishSpeaking(token); };
+        u.onend = end; u.onerror = end; live.push(u); if (live.length > 40) live.shift();     // keep references so the browser does not drop them mid-speech
+        synth.speak(u);
+      });
+    }, 60);
+  });
+}
+// Optional ElevenLabs voice (cloud). Any failure (bad key, no credits, no internet, blocked) falls back to the phone voice.
+var EL = "https://api.elevenlabs.io/v1";
+function elevenFetch(text) {
+  return fetch(EL + "/text-to-speech/" + encodeURIComponent(cfg.elVoice || "JBFqnCBsd6RMkjVDRZzb") + "?output_format=mp3_44100_128", { method: "POST",
+    headers: { "xi-api-key": cfg.elKey, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+    body: JSON.stringify({ text: text.slice(0, 2500), model_id: cfg.elModel || "eleven_flash_v2_5" }) })
+    .then(function (r) { if (!r.ok) throw { status: r.status }; return r.blob(); });
+}
+function elError(e) {
+  var st = e && e.status;
+  return st === 401 ? "ElevenLabs refused the key" : st === 402 || st === 429 ? "ElevenLabs says you are out of credits or going too fast" : st === 422 || st === 404 ? "that voice or model is not available on your plan" : st ? "ElevenLabs error " + st : "the browser could not reach ElevenLabs";
+}
+function cloudSpeak(text, token, fallback) {
+  elevenFetch(text).then(function (blob) {
+    if (token !== speakToken) return;
+    var url = URL.createObjectURL(blob), a = ttsAudio;
+    a.src = url; a.onended = function () { URL.revokeObjectURL(url); finishSpeaking(token); };
+    a.onerror = function () { URL.revokeObjectURL(url); lastCloudError = "the audio would not play"; fallback(); };
+    var p = a.play(); if (p && p.catch) p.catch(function () { lastCloudError = "the browser blocked the audio"; fallback(); });
+  }).catch(function (e) {
+    lastCloudError = elError(e);
+    if (!cloudWarned) { cloudWarned = true; $("you").textContent = "(ElevenLabs voice unavailable: " + lastCloudError + ". Using the phone voice.)"; }
+    if (token === speakToken) fallback();
+  });
+}
+var elVoices = [{ voice_id: "JBFqnCBsd6RMkjVDRZzb", name: "George (British male)" }], elLoaded = false;
+function renderElVoices() {
+  var sel = $("fElVoice"); sel.textContent = "";
+  if (!elLoaded && cfg.elVoice && !elVoices.some(function (v) { return v.voice_id === cfg.elVoice; })) elVoices.unshift({ voice_id: cfg.elVoice, name: cfg.elVoiceName || "Saved voice" });
+  elVoices.forEach(function (v) { var o = document.createElement("option"); o.value = v.voice_id; o.textContent = v.name + (v.labels ? " \u00b7 " + [v.labels.accent, v.labels.gender].filter(Boolean).join(", ") : ""); sel.appendChild(o); });
+  sel.value = cfg.elVoice; if (sel.value !== cfg.elVoice && elVoices.length) sel.value = elVoices[0].voice_id;
+}
+function stopSpeaking() { speakToken++; doneCb = null; stopAudio(); try { if (synth) synth.cancel(); } catch (e) {} speaking = false; refreshStatus(); resumeRec(); }
+
+// ------------------------------------------------------------------ listening
+function pauseRec() { if (rec) { try { rec.abort(); } catch (e) {} } }
+function resumeRec() { if (wantRec && !asleep && !speaking && !rec) setTimeout(startRec, 300); }
+var vbuf = "", vtimer = null;
+function startRec() {
+  if (!SR || rec || !wantRec || asleep || speaking) return;
+  var r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1; rec = r;
+  r.onresult = function (e) {
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      var res = e.results[i], t = (res[0] && res[0].transcript || "").trim(); if (!t) continue;
+      if (res.isFinal) { vbuf = vbuf ? vbuf + " " + t : t; clearTimeout(vtimer); vtimer = setTimeout(flushHeard, 900); }
+      else setStatus("\u201c" + t + "\u201d");
+    }
+  };
+  r.onerror = function (e) {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") { wantRec = false; setMic(); show("", "The microphone is blocked. Allow it for this site in your browser settings, then tap the mic.", { err: true }); }
+  };
+  r.onend = function () { rec = null; refreshStatus(); if (wantRec && !asleep && !speaking) setTimeout(startRec, 350); };
+  try { r.start(); } catch (e) { rec = null; }
+  refreshStatus();
+}
+function stopRec() { wantRec = false; clearTimeout(vtimer); vbuf = ""; if (rec) { try { rec.abort(); } catch (e) {} } rec = null; refreshStatus(); }
+function flushHeard() { var t = vbuf; vbuf = ""; heard(t); }
+function heard(text) {
+  var t = text.trim(); if (!t) return;
+  if (/^(?:hey |ok |okay )?(?:jarvis[,.!\s]*)?(stop|quiet|shush|silence|enough|cancel)\b[.!]?$/i.test(t) && (speaking || /jarvis/i.test(t))) { stopSpeaking(); return; }
+  var m = t.match(/^\s*(?:hey |ok |okay )?jarvis\b[\s,.:!?-]*/i), named = !!m;
+  if (named) t = t.slice(m[0].length).trim();
+  var armed = Date.now() < armedUntil;
+  if (cfg.needWake && !named && !armed) return;
+  lastActive = Date.now();
+  if (!t) { armedUntil = Date.now() + 15000; say("Yes, sir?"); return; }
+  armedUntil = 0; ask(t);
+}
+
+// ------------------------------------------------------------------ clap to wake (only while asleep, so it never fights the speech recogniser for the mic)
+var clap = { ctx: null, stream: null, node: null, floor: .01, prev: 0, count: 0, first: 0, last: 0 };
+function startClap() {
+  if (clap.ctx || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.reject(new Error("no mic"));
+  return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(function (stream) {
+    var AC = window.AudioContext || window.webkitAudioContext; clap.stream = stream; clap.ctx = new AC();
+    var src = clap.ctx.createMediaStreamSource(stream), node = clap.ctx.createScriptProcessor(1024, 1, 1), hush = clap.ctx.createGain();
+    hush.gain.value = 0; node.onaudioprocess = onClapAudio; src.connect(node); node.connect(hush); hush.connect(clap.ctx.destination); clap.node = node;
+    if (clap.ctx.state === "suspended") clap.ctx.resume();
+  });
+}
+function stopClap() {
+  if (clap.stream) clap.stream.getTracks().forEach(function (t) { t.stop(); });
+  if (clap.ctx) { try { clap.ctx.close(); } catch (e) {} }
+  clap.ctx = clap.stream = clap.node = null; clap.count = 0;
+}
+function onClapAudio(e) {
+  var d = e.inputBuffer.getChannelData(0), peak = 0, sum = 0, now = performance.now();
+  for (var i = 0; i < d.length; i++) { var a = d[i] < 0 ? -d[i] : d[i]; if (a > peak) peak = a; sum += d[i] * d[i]; }
+  var rms = Math.sqrt(sum / d.length), crest = rms > 0 ? peak / rms : 0;
+  var isClap = peak >= 0.25 && peak > clap.floor * 8 && clap.prev < peak * 0.45 && crest >= 3.2 && now - clap.last > 90;
+  if (!isClap) clap.floor = clap.floor * 0.995 + rms * 0.005;
+  clap.prev = peak; if (!isClap) return;
+  clap.last = now;
+  if (clap.count === 0 || now - clap.first > 900) { clap.count = 1; clap.first = now; return; }
+  if (now - clap.first < 120) return;
+  clap.count++;
+  if (clap.count >= 2) { clap.count = 0; wake(); }
+}
+function sleepNow() {
+  if (asleep || !started) return;
+  startClap().then(function () { asleep = true; stopRec(); wantRec = false; setMic(); refreshStatus(); }).catch(function () { lastActive = Date.now(); });   // no mic for clapping: just stay awake
+}
+function wake() {
+  if (!asleep) return;
+  asleep = false; stopClap(); lastActive = Date.now(); wantRec = !!SR; setMic(); armedUntil = Date.now() + 15000;
+  if (wantRec) startRec();
+  say("I am awake, sir.");
+}
+setInterval(function () {
+  if (!started || asleep || !cfg.sleepMin || speaking || thinking) return;
+  if (Date.now() - lastActive > cfg.sleepMin * 60000) sleepNow();
+}, 5000);
+
+// ------------------------------------------------------------------ keep the screen on, so he can keep listening
+var wl = null;
+function keepAwake() { try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { wl = l; }).catch(function () {}); } catch (e) {} }
+document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && started) { keepAwake(); resumeRec(); } });
+
+// ------------------------------------------------------------------ the brain
+var PERSONA = "You are Jarvis, a dry, polite, British butler-style AI assistant living on the user's phone. Speak plainly, as you would aloud: at most one witty sentence, then the facts. Say sir only occasionally. No markdown, no lists, no emojis, no URLs, because your answer is read aloud.";
+function systemPrompt() {
+  var now = new Date();
+  return PERSONA + " You are also an independent thinker: answer ANY question from your own knowledge and reasoning, take a position, and say when you are unsure. Keep it to two to four sentences unless asked for depth. " +
+    "To calculate, reply with ONLY lines of the form  CALC: <expression>  (operators + - * / ** ^ % //, functions sqrt sin cos tan asin acos atan log ln exp abs round floor ceil factorial gcd min max radians degrees comb perm, constants pi e; trig is in radians). Do not do arithmetic in your head. " +
+    "You will be given the results, then give the final answer with no CALC line. You cannot browse the web, so for very recent events say so briefly. If notes are supplied and relevant, use them. " +
+    "The user is " + (cfg.name || "the user") + (cfg.city ? ", who lives in " + cfg.city : "") + ". Right now it is " + sayTime(now) + " on " + sayDate(now).replace(/^It is /, "") + "";
+}
+function llm(messages) {
+  if (!cfg.key) return Promise.reject({ nokey: true });
+  var body = { model: cfg.model, messages: messages };
+  if (/gpt-oss/i.test(cfg.model) && /groq\.com/.test(cfg.url)) body.reasoning_effort = "low";
+  return fetch(cfg.url, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cfg.key }, body: JSON.stringify(body) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw { status: r.status, msg: (j.error && (j.error.message || j.error)) || "" }; return j; }); })
+    .then(function (j) { var c = j.choices && j.choices[0] && j.choices[0].message; return (c && c.content) || ""; });
+}
+function think(q) {
+  var ctx = scoreNotes(q, notes), msgs = [{ role: "system", content: systemPrompt() }];
+  history.slice(-8).forEach(function (h) { msgs.push({ role: "user", content: h[0] }); msgs.push({ role: "assistant", content: h[1] }); });
+  msgs.push({ role: "user", content: ctx.length ? "NOTES (may be irrelevant):\n" + ctx.map(function (n) { return "- " + n.title + ": " + n.body; }).join("\n") + "\n\nQUESTION: " + q : q });
+  var round = 0;
+  function step() {
+    return llm(msgs).then(function (text) {
+      var calcs = []; text.replace(/^\s*CALC:\s*(.+?)\s*$/gim, function (_, e) { calcs.push(e); return ""; });
+      if (!calcs.length || ++round >= 6) return text.replace(/^\s*CALC:.*$/gim, "").trim();
+      msgs.push({ role: "assistant", content: text });
+      msgs.push({ role: "user", content: calcs.slice(0, 8).map(function (e) { var r = calc(e); return r.ok ? "CALC " + e + " = " + r.v : "CALC " + e + " -> ERROR: " + r.v; }).join("\n") + "\n\nContinue. Give the final answer now if you have what you need." });
+      return step();
+    });
+  }
+  return step().then(function (a) { return a || "I could not reach a conclusion on that one, sir. Do rephrase it."; });
+}
+function errMsg(e) {
+  if (e && e.nokey) return "I have no brain connected yet, sir. Open Settings and paste your API key.";
+  if (e && e.status === 401) return "The provider refused the key, sir. Check it in Settings.";
+  if (e && e.status === 429) return "The provider says we are asking too quickly, sir. Give it a minute.";
+  if (e && e.status) return "The provider returned an error (" + e.status + "). " + String(e.msg || "").slice(0, 160);
+  return "I could not reach the AI provider, sir. Either the internet is down, or the provider does not allow direct calls from a phone browser. Settings has a Test brain button that will tell us which.";
+}
+
+// ------------------------------------------------------------------ weather (open-meteo, free, no key)
+function weather(city) {
+  var parts = city.split(",").map(function (s) { return s.trim(); }), name = parts[0], region = (parts[1] || "").toLowerCase();
+  return fetch("https://geocoding-api.open-meteo.com/v1/search?count=8&language=en&format=json&name=" + encodeURIComponent(name)).then(function (r) { return r.json(); }).then(function (g) {
+    var rs = g.results || []; if (!rs.length) throw new Error("place");
+    var best = rs.filter(function (r) { return region && ((r.admin1 || "").toLowerCase().indexOf(region) === 0 || (r.admin1_code || "").toLowerCase() === region || (r.country_code || "").toLowerCase() === region); })[0] || rs[0];
+    var f = cfg.fahrenheit;
+    return fetch("https://api.open-meteo.com/v1/forecast?latitude=" + best.latitude + "&longitude=" + best.longitude +
+      "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto" +
+      (f ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : "")).then(function (r) { return r.json(); }).then(function (w) {
+      var c = w.current, d = w.daily, u = f ? "\u00b0F" : "\u00b0C", wind = f ? "mph" : "km/h";
+      return "In " + best.name + " it is " + Math.round(c.temperature_2m) + u + " and " + (WMO[c.weather_code] || "unsettled") + ", feeling like " + Math.round(c.apparent_temperature) + ". Today's high is " + Math.round(d.temperature_2m_max[0]) +
+        ", low " + Math.round(d.temperature_2m_min[0]) + ", with a " + (d.precipitation_probability_max[0] || 0) + " percent chance of rain and wind at " + Math.round(c.wind_speed_10m) + " " + wind + ".";
+    });
+  });
+}
+
+// ------------------------------------------------------------------ instant commands (never touch the AI)
+function youtubeAction(what) {
+  var isLink = /^https?:\/\//i.test(what), url = isLink ? what : "https://www.youtube.com/results?search_query=" + encodeURIComponent(what);
+  return { href: url, label: "\u25b6  Play on YouTube" };
+}
+function setTimer(t) {
+  var id = setTimeout(function () {
+    var msg = t.what ? "Sir, your reminder: " + t.what + "." : "Sir, your " + t.words + " timer is done.";
+    try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
+    try { if (window.Notification && Notification.permission === "granted") new Notification("Jarvis", { body: msg }); } catch (e) {}
+    show("", msg); say(msg, true);
+  }, t.ms);
+  timers.push(id);
+  try { if (window.Notification && Notification.permission === "default") Notification.requestPermission(); } catch (e) {}
+}
+function localCommand(q) {     // returns null, a string, {text, actions} or a Promise of either
+  var l = q.trim(), now = new Date(), m;
+  if (/^\s*(?:what(?:'s| is)?\s+(?:the\s+)?time|what time is it|tell me the time|got the time)\b/i.test(l)) return "It is " + sayTime(now) + ", sir.";
+  if (/^\s*(?:what(?:'s| is)?\s+(?:the\s+|today's\s+)?date|what day is (?:it|today)|what(?:'s| is) today)\b/i.test(l)) return sayDate(now);
+  if (NEEDLE.test(l)) { var song = cfg.needle || "Diary of Jane Breaking Benjamin"; return { text: "Needle dropped, sir. Tap play and enjoy " + song.replace(/^https?:\/\/\S+$/, "your song") + ".", actions: [youtubeAction(song)], open: youtubeAction(song).href }; }
+  if ((m = l.match(/^\s*(?:please\s+)?play\s+(.+?)(?:\s+on\s+youtube)?\s*[.!?]*$/i)) && !/^(?:the\s+)?(?:music|something)$/i.test(m[1])) return { text: "Very good, sir. Tap play.", actions: [youtubeAction(m[1])], open: youtubeAction(m[1]).href };
+  if (/^\s*(?:go to sleep|sleep mode|goodnight|good night)\b/i.test(l)) { setTimeout(sleepNow, 1500); return "Very good, sir. Clap twice when you need me."; }
+  var tm = parseTimer(l); if (tm) { setTimer(tm); return tm.what ? "I shall remind you to " + tm.what + " in " + tm.words + "." : "Timer set for " + tm.words + "."; }
+  if (/^\s*(?:cancel|clear|stop)\s+(?:all\s+)?(?:the\s+)?timers?\b/i.test(l)) { timers.forEach(clearTimeout); timers = []; return "All timers cancelled."; }
+  if ((m = l.match(/^\s*(?:please\s+)?(?:remember|note|make a note)\s+(?:that\s+)?(.+?)\s*[.!?]*$/i)) && !/^(?:me|to)\b/i.test(m[1])) {
+    var body = m[1].trim(), title = body.split(/\s+/).slice(0, 6).join(" "); title = title.charAt(0).toUpperCase() + title.slice(1);
+    notes.push({ id: Date.now(), title: title, body: body, t: Date.now() }); saveNotes(); return "Consider it committed to memory, sir. A new star joins your constellation.";
+  }
+  var td = todoCommand(l, todo); if (td) { todo = td.items; saveTodo(); return td.reply; }
+  var r = chance(l) || convert(l) || quickMath(l); if (r) return r;
+  if (/^\s*(?:good\s+(?:morning|afternoon|evening)|brief me|(?:give me )?(?:my |the )?(?:daily )?(?:briefing|brief|rundown)|catch me up)\b[\s,.!?]*(?:jarvis)?[\s.!?]*$/i.test(l)) {
+    var lead = "Good " + daypart(now) + ", sir. It is " + sayTime(now) + " on " + DAYS[now.getDay()] + " the " + ordinal(now.getDate()) + ".";
+    var tail = todo.length ? " On your list: " + todo.slice(0, 5).join("; ") + "." : " Nothing on your list.";
+    return cfg.city ? weather(cfg.city).then(function (w) { return lead + " " + w + tail; }, function () { return lead + tail; }) : lead + tail;
+  }
+  if ((m = l.match(/\b(weather|forecast|temperature|how (?:hot|cold) is it|going to rain|is it raining)\b(?:.*?\b(?:in|for|at)\s+([a-z][a-z .,'-]+?))?\s*[?.!]*$/i)) && /^\s*(?:what(?:'s| is)|how(?:'s| is)|check|tell me|give me|is it|will it|whats|weather|forecast)/i.test(l)) {
+    var place = (m[2] || "").trim().replace(/\b(today|tonight|tomorrow|right now|now)\b/gi, "").trim();
+    if (!place || /^(my (city|area|town|place|location)|here|home|outside)$/i.test(place)) place = cfg.city;
+    if (!place) return "Tell me your city in Settings, sir, and I shall always know the weather.";
+    return weather(place).then(function (w) { return w; }, function () { return "I could not fetch the weather for " + place + ", sir."; });
+  }
+  return null;
+}
+
+// ------------------------------------------------------------------ asking
+function say(text, force) { show("", text); speak(text); lastActive = Date.now(); }
+function ask(q) {
+  q = (q || "").trim(); if (!q) return;
+  lastActive = Date.now(); thinking = true; refreshStatus(); show(q, "\u2026");
+  var finish = function (out, err) {
+    thinking = false; var text = typeof out === "string" ? out : out.text, actions = (out && out.actions) || [];
+    show(q, text, { err: err, actions: actions }); history.push([q, text]); if (history.length > 12) history.shift();
+    if (out && out.open) { try { window.open(out.open, "_blank"); } catch (e) {} }     // the tap-to-play button is always there in case the browser blocks this
+    speak(text); lastActive = Date.now(); refreshStatus();
+  };
+  Promise.resolve().then(function () { return localCommand(q); }).then(function (loc) {
+    if (loc !== null && loc !== undefined) return finish(loc);
+    return think(q).then(function (a) { finish(a); });
+  }).catch(function (e) { finish(errMsg(e), true); });
+}
+
+// ------------------------------------------------------------------ buttons and forms
+function setMic() { var on = wantRec && !asleep; $("mic").setAttribute("aria-pressed", on ? "true" : "false"); }
+$("mic").onclick = function () {
+  if (!started) return;
+  if (asleep) return wake();
+  if (!SR) return show("", "This browser has no speech recognition. You can type to me, or use Chrome on Android.", { err: true });
+  if (wantRec) { stopRec(); } else { wantRec = true; lastActive = Date.now(); startRec(); }
+  setMic();
+};
+function submitText() { var v = $("q").value.trim(); if (!v) return; $("q").value = ""; $("q").blur(); if (asleep) wake(); ask(v); }
+$("send").onclick = submitText;
+$("q").addEventListener("keydown", function (e) { if (e.key === "Enter") submitText(); });
+$("q").addEventListener("focus", function () { lastActive = Date.now(); });
+$("go").onclick = function () {
+  $("start").style.display = "none"; started = true; lastActive = Date.now(); keepAwake();
+  try { var u = new SpeechSynthesisUtterance(" "); u.volume = 0; if (synth) synth.speak(u); } catch (e) {}     // unlocks speech on iPhone
+  try { ttsAudio.src = SILENT_WAV; var pp = ttsAudio.play(); if (pp && pp.catch) pp.catch(function () {}); } catch (e) {}   // unlocks the cloud voice player
+  if (SR) { wantRec = true; startRec(); } setMic(); refreshStatus();
+  if (!cfg.key) { openSettings(); show("", "Welcome, sir. Paste an API key in Settings and I shall have a brain."); }
+  else { var g = "Good " + daypart(new Date()) + ", sir. All systems are online."; say(g); }
+};
+
+// settings
+function fill() {
+  $("fProv").value = cfg.provider; $("fKey").value = cfg.key; $("fModel").value = cfg.model; $("fUrl").value = cfg.url; $("fName").value = cfg.name; $("fCity").value = cfg.city;
+  $("fNeedle").value = cfg.needle; $("fSleep").value = cfg.sleepMin; $("fSpeak").checked = cfg.speak; $("fWake").checked = cfg.needWake; $("fF").checked = cfg.fahrenheit;
+  $("fEngine").value = cfg.engine; $("fElKey").value = cfg.elKey; $("fElModel").value = cfg.elModel; renderElVoices(); fillVoices(); toggleAz();
+}
+function toggleAz() { $("elBox").style.display = $("fEngine").value === "eleven" ? "block" : "none"; }
+$("fEngine").onchange = toggleAz;
+$("bElVoices").onclick = function () {
+  var key = $("fElKey").value.trim(); if (!key) { $("voiceTestMsg").textContent = "Paste your ElevenLabs key first."; return; }
+  $("voiceTestMsg").textContent = "Loading your voices\u2026";
+  fetch(EL + "/voices", { headers: { "xi-api-key": key } }).then(function (r) { if (!r.ok) throw { status: r.status }; return r.json(); }).then(function (j) {
+    var vs = (j.voices || []).slice(); if (!vs.length) throw { status: 404 };
+    var score = function (v) { var l = v.labels || {}; return (/british/i.test(l.accent || "") ? 2 : 0) + (/male/i.test(l.gender || "") && !/female/i.test(l.gender || "") ? 1 : 0); };
+    vs.sort(function (a, b) { return score(b) - score(a) || a.name.localeCompare(b.name); });
+    var cur = $("fElVoice").value; elVoices = vs; elLoaded = true; cfg.elVoice = vs.some(function (v) { return v.voice_id === cur; }) ? cur : vs[0].voice_id; renderElVoices(); $("voiceTestMsg").textContent = "Loaded " + vs.length + " voices. British male voices are listed first.";
+  }).catch(function (e) { $("voiceTestMsg").textContent = "Could not load voices: " + elError(e) + ". You can still use the built-in George voice."; });
+};
+function fillVoices() {
+  var sel = $("fVoice"), vs = allVoices().slice(), cur = cfg.voiceName; sel.textContent = "";
+  var auto = document.createElement("option"); auto.value = ""; auto.textContent = "Automatic (same preference list as the computer)"; sel.appendChild(auto);
+  vs.sort(function (a, b) { var ea = normLang(a).indexOf("en") === 0, eb = normLang(b).indexOf("en") === 0; if (ea !== eb) return eb - ea; return (normLang(b) === "en-gb") - (normLang(a) === "en-gb") || a.name.localeCompare(b.name); });
+  vs.forEach(function (v) { var o = document.createElement("option"); o.value = v.name; o.textContent = v.name + " (" + v.lang + ")"; sel.appendChild(o); });
+  sel.value = cur; if (sel.value !== cur) sel.value = "";
+  var now = chooseVoice(vs, cur, new URLSearchParams(location.search).get("voice"));
+  $("voiceNow").textContent = now ? "Currently using: " + now.name + " (" + now.lang + ")" : (synth ? "No voices found yet." : "This browser has no speech output.");
+}
+$("bTestVoice").onclick = function () {
+  var snap = { engine: cfg.engine, voiceName: cfg.voiceName, elKey: cfg.elKey, elVoice: cfg.elVoice, elVoiceName: cfg.elVoiceName, elModel: cfg.elModel, speak: cfg.speak };
+  cfg.engine = $("fEngine").value; cfg.voiceName = $("fVoice").value; cfg.elKey = $("fElKey").value.trim(); cfg.elVoice = $("fElVoice").value || cfg.elVoice; cfg.elModel = $("fElModel").value; cfg.speak = true;
+  lastCloudError = ""; cloudWarned = true; $("voiceTestMsg").textContent = "Speaking\u2026";
+  speak("Good " + daypart(new Date()) + ", sir. This is how I sound.", function () {
+    var msg = cfg.engine === "eleven" ? (lastCloudError ? "ElevenLabs did not work: " + lastCloudError + ". That was the phone voice instead." : "That was the ElevenLabs voice.") : "That was the phone voice.", key = cfg.elKey, usedCloud = cfg.engine === "eleven" && !lastCloudError;
+    Object.assign(cfg, snap); cloudWarned = false; fillVoices(); $("voiceTestMsg").textContent = msg;
+    if (usedCloud && key) fetch(EL + "/user/subscription", { headers: { "xi-api-key": key } }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (j && j.character_limit) $("voiceTestMsg").textContent = msg + " Credits used this month: " + j.character_count + " of " + j.character_limit + ".";
+    }).catch(function () {});
+  });
+};
+function openSettings() { fill(); $("mSet").classList.add("show"); }
+$("bSet").onclick = openSettings;
+$("setClose").onclick = function () { $("mSet").classList.remove("show"); };
+function applyProvider(name) { $("fProv").value = name; var p = PRESETS[name]; if (p && p.url) { $("fUrl").value = p.url; $("fModel").value = p.model; } }
+$("fProv").onchange = function () { applyProvider($("fProv").value); };
+$("fKey").oninput = function () {
+  var d = providerFromKey($("fKey").value);
+  if (d && d !== $("fProv").value) { applyProvider(d); $("keyNote").textContent = "That looks like " + (d === "nvidia" ? "an NVIDIA" : d === "groq" ? "a Groq" : "a Google") + " key, so I switched the provider, model and address to match."; }
+  else $("keyNote").textContent = "";
+};
+$("bTestBrain").onclick = function () {
+  var snap = { key: cfg.key, url: cfg.url, model: cfg.model }, d = providerFromKey($("fKey").value);
+  cfg.key = $("fKey").value.trim(); cfg.url = $("fUrl").value.trim(); cfg.model = $("fModel").value.trim(); $("brainMsg").textContent = "Testing\u2026";
+  var restore = function () { Object.assign(cfg, snap); };
+  llm([{ role: "user", content: "Reply with the single word OK." }]).then(function (t) { restore(); $("brainMsg").textContent = "Connected. The model answered: " + String(t || "(empty reply)").slice(0, 60); })
+    .catch(function (e) {
+      restore();
+      $("brainMsg").textContent = e && e.nokey ? "Paste a key first." : e && e.status === 401 ? "The provider refused the key." + (d ? " It looks like a " + d + " key, so check the provider above matches." : "") :
+        e && e.status === 404 ? "Provider says that model or address was not found (404). Check the model name." : e && e.status ? "Provider error " + e.status + ": " + String(e.msg || "").slice(0, 120) :
+        "Could not reach the provider. Either no internet, or this provider blocks direct calls from a phone browser, in which case use Groq or Gemini instead.";
+    });
+};
+$("setSave").onclick = function () {
+  cfg.provider = $("fProv").value; cfg.key = $("fKey").value.trim(); cfg.model = $("fModel").value.trim(); cfg.url = $("fUrl").value.trim(); cfg.name = $("fName").value.trim(); cfg.city = $("fCity").value.trim();
+  cfg.engine = $("fEngine").value; cfg.voiceName = $("fVoice").value; cfg.elKey = $("fElKey").value.trim(); cfg.elVoice = $("fElVoice").value || cfg.elVoice; cfg.elModel = $("fElModel").value;
+  var ev = elVoices.filter(function (v) { return v.voice_id === cfg.elVoice; })[0]; cfg.elVoiceName = ev ? ev.name : cfg.elVoiceName;
+  cfg.needle = $("fNeedle").value.trim(); cfg.sleepMin = Math.max(0, parseInt($("fSleep").value, 10) || 0); cfg.speak = $("fSpeak").checked; cfg.needWake = $("fWake").checked; cfg.fahrenheit = $("fF").checked;
+  saveCfg(); $("mSet").classList.remove("show"); refreshStatus(); show("", "Settings saved, sir.");
+};
+$("bExport").onclick = function () {
+  var blob = new Blob([JSON.stringify({ notes: notes, todo: todo }, null, 1)], { type: "application/json" }), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "jarvis-notes.json"; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+};
+$("bImport").onclick = function () { $("fImport").click(); };
+$("fImport").onchange = function () {
+  var f = $("fImport").files[0]; if (!f) return; var fr = new FileReader();
+  fr.onload = function () { try { var d = JSON.parse(fr.result); if (Array.isArray(d.notes)) { notes = d.notes; saveNotes(); } if (Array.isArray(d.todo)) { todo = d.todo; saveTodo(); } show("", "Imported " + notes.length + " notes, sir."); } catch (e) { show("", "That file did not look like a Jarvis export.", { err: true }); } };
+  fr.readAsText(f);
+};
+var deferred = null;
+window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; $("bInstall").style.display = ""; });
+$("bInstall").onclick = function () { if (deferred) { deferred.prompt(); deferred = null; $("bInstall").style.display = "none"; } };
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone) $("iosHint").style.display = "block";
+
+// notes
+function renderNotes() {
+  var box = $("nList"); box.textContent = "";
+  if (!notes.length) { var p = document.createElement("div"); p.className = "hint"; p.textContent = "No notes yet. Say \u201cJarvis, remember that\u2026\u201d or write one above."; box.appendChild(p); return; }
+  notes.slice().reverse().forEach(function (n) {
+    var d = document.createElement("div"); d.className = "note";
+    var b = document.createElement("b"); b.textContent = n.title; var t = document.createElement("div"); t.textContent = n.body;
+    var x = document.createElement("button"); x.className = "btn warn"; x.textContent = "Delete"; x.onclick = function () { notes = notes.filter(function (z) { return z.id !== n.id; }); saveNotes(); renderNotes(); };
+    d.appendChild(b); d.appendChild(t); d.appendChild(x); box.appendChild(d);
+  });
+}
+$("bNotes").onclick = function () { renderNotes(); $("mNotes").classList.add("show"); };
+$("notesClose").onclick = function () { $("mNotes").classList.remove("show"); };
+$("nSave").onclick = function () {
+  var v = $("nNew").value.trim(); if (!v) return; var title = v.split(/\s+/).slice(0, 6).join(" ");
+  notes.push({ id: Date.now(), title: title.charAt(0).toUpperCase() + title.slice(1), body: v, t: Date.now() }); saveNotes(); $("nNew").value = ""; renderNotes();
+};
+
+// ------------------------------------------------------------------ the picture: nebula, stars, a holographic ring of notes around a calm core
+var cv = $("bg"), g = cv.getContext("2d"), W = 0, H = 0, hits = [];
+function resize() { var d = Math.min(window.devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0); }
+addEventListener("resize", resize); resize();
+var stars = []; for (var si = 0; si < 150; si++) stars.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + .3, s: Math.random() * 2 + .5, p: Math.random() * 6.28 });
+var PAL = ["76,201,240", "72,149,239", "123,155,255", "162,155,254", "46,196,182", "100,223,223", "128,184,255", "184,192,255", "86,207,225"];
+var STATE_COL = { idle: "92,184,255", listening: "79,227,255", speaking: "124,196,255", thinking: "167,139,250" };
+function drawOrb(cx, cy, R, t, st, amp) {
+  var dim = asleep ? .3 : 1, col = STATE_COL[st] || STATE_COL.idle, spin = st === "thinking" ? 4 : 1, rr = R * (1 + amp * .05);
+  var gl = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 2.6); gl.addColorStop(0, "rgba(" + col + "," + (.42 * dim) + ")"); gl.addColorStop(.5, "rgba(" + col + "," + (.1 * dim) + ")"); gl.addColorStop(1, "rgba(" + col + ",0)");
+  g.fillStyle = gl; g.fillRect(cx - rr * 3, cy - rr * 3, rr * 6, rr * 6);
+  [[1.0, [14, 8], 1.8, .00011], [1.38, [3, 8], 1.2, -.00017], [1.78, [34, 12, 4, 12], 1.6, .00007]].forEach(function (rg) {
+    g.save(); g.translate(cx, cy); g.rotate(t * rg[3] * spin); g.setLineDash(rg[1]); g.lineWidth = rg[2]; g.strokeStyle = "rgba(" + col + "," + (.85 * dim) + ")";
+    g.beginPath(); g.arc(0, 0, rr * rg[0], 0, 6.2832); g.stroke(); g.restore();
+  });
+  g.setLineDash([]); g.strokeStyle = "rgba(" + col + "," + (.55 * dim) + ")"; g.lineWidth = 1;
+  for (var k = 0; k < 48; k++) { var a = k / 48 * 6.2832, r0 = rr * 2.0, r1 = rr * (k % 4 === 0 ? 2.18 : 2.1); g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); g.stroke(); }
+  var cg = g.createRadialGradient(cx, cy, 0, cx, cy, rr * .55); cg.addColorStop(0, "rgba(255,255,255," + dim + ")"); cg.addColorStop(.35, "rgba(160,220,255," + (.9 * dim) + ")"); cg.addColorStop(1, "rgba(" + col + ",0)");
+  g.fillStyle = cg; g.beginPath(); g.arc(cx, cy, rr * .55, 0, 6.2832); g.fill();
+}
+function drawNode(x, y, sc, alpha, label, ci, sel, t, ph) {
+  var col = PAL[ci % PAL.length], r = 10 * sc; g.globalAlpha = alpha;
+  var gl = g.createRadialGradient(x, y, 0, x, y, r * 3.2); gl.addColorStop(0, "rgba(" + col + ",.42)"); gl.addColorStop(1, "rgba(" + col + ",0)"); g.fillStyle = gl; g.fillRect(x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
+  g.strokeStyle = "rgba(" + col + ",.95)"; g.lineWidth = 1.2; g.beginPath();
+  for (var k = 0; k <= 6; k++) { var a = k / 6 * 6.2832 + t * .0004 + ph; var px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (k) g.lineTo(px, py); else g.moveTo(px, py); } g.stroke();
+  g.save(); g.setLineDash([3, 4]); g.lineDashOffset = -t * .01; g.beginPath(); g.arc(x, y, r * 1.55, 0, 6.2832); g.stroke(); g.restore();
+  g.fillStyle = "#e3f6ff"; g.beginPath(); g.arc(x, y, r * .34, 0, 6.2832); g.fill();
+  if (sel) { g.strokeStyle = "rgba(220,240,255,.9)"; g.lineWidth = 1.4; g.beginPath(); g.arc(x, y, r * 2.1, 0, 6.2832); g.stroke(); }
+  if (alpha > .5 || sel) { g.font = "600 " + Math.round(9.5 * sc + 1) + "px ui-monospace, Menlo, Consolas, monospace"; g.textAlign = "center"; g.fillStyle = "rgba(196,232,255," + Math.min(1, alpha + .1) + ")"; g.fillText(String(label).toUpperCase().slice(0, 16), x, y + r * 2.5 + 8); }
+  g.globalAlpha = 1;
+}
+var ripples = [], lastRip = 0;
+function frame(t) {
+  var st = currentState(), talking = st === "speaking";
+  var target = talking ? .55 + .45 * Math.sin(t * .0022) : 0;                  // one slow smooth swell while he talks, no flicker
+  speakAmp += (Math.max(0, target) - speakAmp) * (talking ? .035 : .03); if (speakAmp < .004) speakAmp = 0;
+  if (talking && t - lastRip > 2600) { ripples.push(t); lastRip = t; }
+  g.fillStyle = "#03060f"; g.fillRect(0, 0, W, H);
+  var M = Math.max(W, H);
+  [[.5, .3, .8, "40,90,255", .17 + speakAmp * .05, 5e-5, 0], [.2, .55, .6, "0,190,230", .08, 7e-5, 2], [.82, .62, .62, "110,80,235", .11, 6e-5, 4]].forEach(function (c) {
+    var x = W * (c[0] + .05 * Math.sin(t * c[5] + c[6])), y = H * (c[1] + .04 * Math.cos(t * c[5] * 1.3 + c[6])), gg = g.createRadialGradient(x, y, 0, x, y, M * c[2]);
+    gg.addColorStop(0, "rgba(" + c[3] + "," + c[4] + ")"); gg.addColorStop(.55, "rgba(" + c[3] + "," + c[4] * .35 + ")"); gg.addColorStop(1, "rgba(" + c[3] + ",0)"); g.fillStyle = gg; g.fillRect(0, 0, W, H);
+  });
+  for (var i = 0; i < stars.length; i++) { var s = stars[i]; g.globalAlpha = (.3 + .6 * (.5 + .5 * Math.sin(t * .0008 * s.s + s.p))) * (asleep ? .5 : 1); g.fillStyle = "#cfe6ff"; g.beginPath(); g.arc(s.x * W, s.y * H, s.r, 0, 6.2832); g.fill(); }
+  g.globalAlpha = 1;
+  var cx = W / 2, cy = Math.max(150, Math.min(H * .3, 280)), R = Math.min(W * .17, 64);
+  for (var ri = ripples.length - 1; ri >= 0; ri--) { var age = (t - ripples[ri]) / 5200; if (age >= 1) { ripples.splice(ri, 1); continue; } g.strokeStyle = "rgba(110,190,255," + ((1 - age) * (1 - age) * .16) + ")"; g.lineWidth = 1.4; g.beginPath(); g.arc(cx, cy, age * M * .5 + R, 0, 6.2832); g.stroke(); }
+  // notes: a tilted ring of holograms around the core, all joined by lines
+  var list = notes.slice(-14), n = list.length, rx = Math.min(W * .42, 210), ry = rx * .36, pts = [];
+  for (var k = 0; k < n; k++) { var a = k / n * 6.2832 + t * .00006; pts.push({ n: list[k], a: a, x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry, z: Math.sin(a) }); }
+  hits = [];
+  if (n > 1) {
+    g.lineWidth = 1; g.strokeStyle = "rgba(110,170,255,.2)"; g.beginPath(); pts.forEach(function (p, k) { if (k) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.closePath(); g.stroke();
+    g.strokeStyle = "rgba(110,170,255,.09)"; g.beginPath(); pts.forEach(function (p, k) { var q = pts[(k + 2) % n]; g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); }); g.stroke();
+    g.strokeStyle = "rgba(110,170,255,.07)"; g.beginPath(); pts.forEach(function (p) { g.moveTo(p.x, p.y); g.lineTo(cx, cy); }); g.stroke();
+  }
+  var order = pts.slice().sort(function (p, q) { return p.z - q.z; }), orbDrawn = false;
+  order.forEach(function (p) {
+    if (!orbDrawn && p.z >= 0) { drawOrb(cx, cy, R, t, st, speakAmp); orbDrawn = true; }
+    var depth = (p.z + 1) / 2, sc = .75 + .3 * depth, id = p.n.id;
+    drawNode(p.x, p.y, sc, (.35 + .65 * depth) * (asleep ? .5 : 1), p.n.title, notes.indexOf(p.n), selected === id, t, id % 7);
+    hits.push({ x: p.x, y: p.y, r: 28, n: p.n });
+  });
+  if (!orbDrawn) drawOrb(cx, cy, R, t, st, speakAmp);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+cv.addEventListener("pointerdown", function (e) {
+  var best = null, bd = 1e9; hits.forEach(function (h) { var d = Math.hypot(h.x - e.clientX, h.y - e.clientY); if (d < h.r && d < bd) { bd = d; best = h; } });
+  if (best) { selected = best.n.id; show("", best.n.body); lastActive = Date.now(); } else selected = null;
+});
+
+// ------------------------------------------------------------------ install the offline shell
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) navigator.serviceWorker.register("sw.js").catch(function () {});
+refreshStatus(); fill();
+window.__jarvisCore = { providerFromKey: providerFromKey, chooseVoice: chooseVoice, xmlEsc: xmlEsc, calc: calc, quickMath: quickMath, convert: convert, parseTimer: parseTimer, todoCommand: todoCommand, scoreNotes: scoreNotes, sayTime: sayTime, sayDate: sayDate, sentences: sentences, NEEDLE: NEEDLE };
+})();
+</script>
+</body>
+</html>
